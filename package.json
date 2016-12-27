@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "hoek": "4.x.x",
-    "iltorb": "1.1.x",
+    "iltorb": "1.0.x",
     "joi": "10.x.x"
   },
   "devDependencies": {
