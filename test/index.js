@@ -136,6 +136,47 @@ describe('brok', () => {
             });
         });
 
+        it('handles route compression options', (done) => {
+
+            const server = provisionServer();
+            const handler = (request, reply) => {
+
+                return reply({ hello: 'world' });
+            };
+
+            let compressOptions;
+            const origCompressStream = Iltorb.compressStream;
+            Iltorb.compressStream = function (options) {
+
+                compressOptions = options;
+                return origCompressStream.apply(Iltorb, arguments);
+            };
+
+            server.route({ method: 'GET', path: '/text', config: { handler, compression: { br: { mode: 'text' } } } });
+            server.route({ method: 'GET', path: '/quality', config: { handler, compression: { br: { quality: 1 } } } });
+
+            server.inject({ url: '/text', headers: { 'accept-encoding': 'br' } }, (res1) => {
+
+                expect(res1.statusCode).to.equal(200);
+                expect(res1.headers['content-encoding']).to.equal('br');
+                expect(res1.headers['content-length']).to.not.exist();
+                expect(JSON.parse(Iltorb.decompressSync(res1.rawPayload).toString())).to.equal({ hello: 'world' });
+                expect(compressOptions).to.contain({ mode: 1, quality: 5 });
+
+                server.inject({ url: '/quality', headers: { 'accept-encoding': 'br' } }, (res2) => {
+
+                    Iltorb.compressStream = origCompressStream;
+
+                    expect(res2.statusCode).to.equal(200);
+                    expect(res2.headers['content-encoding']).to.equal('br');
+                    expect(res2.headers['content-length']).to.not.exist();
+                    expect(JSON.parse(Iltorb.decompressSync(res2.rawPayload).toString())).to.equal({ hello: 'world' });
+                    expect(compressOptions).to.contain({ mode: 0, quality: 1 });
+                    done();
+                });
+            });
+        });
+
         it('throws on unknown options', (done) => {
 
             const fn = (options) => {
