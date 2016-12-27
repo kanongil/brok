@@ -2,7 +2,7 @@
 
 Brotli encoder and decoder for hapi.js.
 
-[![Build Status](https://secure.travis-ci.org/kanongil/brok.png)](http://travis-ci.org/hapijs/brok)
+[![Build Status](https://travis-ci.org/kanongil/brok.svg?branch=master)](https://travis-ci.org/kanongil/brok)
 
 Lead Maintainer - [Gil Pedersen](https://github.com/kanongil)
 
