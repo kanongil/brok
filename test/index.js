@@ -59,6 +59,69 @@ describe('brok', () => {
             });
         });
 
+        it('handles late registration', (done) => {
+
+            const server = new Hapi.Server();
+            server.connection();
+
+            const handler = (request, reply) => {
+
+                return reply('compressable');
+            };
+
+            server.route({ method: 'GET', path: '/compressable', config: { handler, compression: { br: {} } } });
+
+            server.register(Brok, Hoek.ignore);
+
+            server.inject({ url: '/compressable', headers: { 'accept-encoding': 'br' } }, (res) => {
+
+                expect(res.statusCode).to.equal(200);
+                expect(res.headers['content-encoding']).to.equal('br');
+                expect(res.headers['content-length']).to.not.exist();
+
+                const decompressed = Iltorb.decompressSync(res.rawPayload);
+                expect(decompressed.length).to.equal(12);
+                expect(decompressed.toString()).to.equal('compressable');
+
+                done();
+            });
+        });
+
+        it('works with multiple connections', (done) => {
+
+            const server = new Hapi.Server();
+            const api1 = server.connection();
+            const api2 = server.connection();
+            api1.register(Brok, Hoek.ignore);
+
+            const handler = (request, reply) => {
+
+                return reply('compressable');
+            };
+
+            server.route({ method: 'GET', path: '/compressable', handler });
+
+            api1.inject({ url: '/compressable', headers: { 'accept-encoding': 'br' } }, (res1) => {
+
+                expect(res1.statusCode).to.equal(200);
+                expect(res1.headers['content-encoding']).to.equal('br');
+                expect(res1.headers['content-length']).to.not.exist();
+
+                const decompressed1 = Iltorb.decompressSync(res1.rawPayload);
+                expect(decompressed1.length).to.equal(12);
+                expect(decompressed1.toString()).to.equal('compressable');
+
+                api2.inject({ url: '/compressable', headers: { 'accept-encoding': 'br' } }, (res2) => {
+
+                    expect(res2.statusCode).to.equal(200);
+                    expect(res2.headers['content-encoding']).to.not.exist();
+                    expect(res2.payload.length).to.equal(12);
+                    expect(res2.payload).to.equal('compressable');
+                    done();
+                });
+            });
+        });
+
         it('requires accept-encoding', (done) => {
 
             const server = provisionServer();
