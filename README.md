@@ -6,6 +6,16 @@ Brotli encoder and decoder for hapi.js.
 
 Lead Maintainer - [Gil Pedersen](https://github.com/kanongil)
 
+## Install
+
+On Windows, in order to compile the native bindings, it is recommended to install the [windows-build-tools](https://github.com/felixrieseberg/windows-build-tools) beforehand.
+
+On Linux, a recent g++ compiler is required.
+
+```sh
+npm install brok
+```
+
 ## Example
 
 ### Registration
