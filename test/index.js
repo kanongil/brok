@@ -261,9 +261,42 @@ describe('brok', () => {
 
     describe('decompression', () => {
 
-        it('is supported for compressed requests', (done) => {
+        it('is not enabled by default', (done) => {
+
+            let handled = false;
 
             const server = provisionServer();
+            const handler = (request, reply) => {
+
+                handled = true;
+                return reply(request.payload);
+            };
+
+            server.route({ method: 'POST', path: '/upload', handler });
+
+            const buf = Iltorb.compressSync(new Buffer('{"hello":"world"}'));
+            const request = {
+                method: 'POST',
+                url: '/upload',
+                headers: {
+                    'content-type': 'application/json',
+                    'content-encoding': 'br',
+                    'content-length': buf.length
+                },
+                payload: buf
+            };
+
+            server.inject(request, (res) => {
+
+                expect(res.statusCode).to.equal(400);
+                expect(handled).to.equal(false);
+                done();
+            });
+        });
+
+        it('is supported for compressed requests', (done) => {
+
+            const server = provisionServer({ decompress: true });
             const handler = (request, reply) => {
 
                 return reply(request.payload);
@@ -295,7 +328,7 @@ describe('brok', () => {
 
         it('returns 400 for invalid payload', (done) => {
 
-            const server = provisionServer();
+            const server = provisionServer({ decompress: true });
             const handler = (request, reply) => {
 
                 return reply(request.payload);
@@ -320,39 +353,6 @@ describe('brok', () => {
                 expect(res.statusCode).to.equal(400);
                 expect(res.headers['content-type']).to.contain('application/json');
                 expect(res.result).to.contain({ message: 'Invalid compressed payload' });
-                done();
-            });
-        });
-
-        it('can be disabled', (done) => {
-
-            let handled = false;
-
-            const server = provisionServer({ decompress: false });
-            const handler = (request, reply) => {
-
-                handled = true;
-                return reply(request.payload);
-            };
-
-            server.route({ method: 'POST', path: '/upload', handler });
-
-            const buf = Iltorb.compressSync(new Buffer('{"hello":"world"}'));
-            const request = {
-                method: 'POST',
-                url: '/upload',
-                headers: {
-                    'content-type': 'application/json',
-                    'content-encoding': 'br',
-                    'content-length': buf.length
-                },
-                payload: buf
-            };
-
-            server.inject(request, (res) => {
-
-                expect(res.statusCode).to.equal(400);
-                expect(handled).to.equal(false);
                 done();
             });
         });

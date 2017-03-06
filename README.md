@@ -63,8 +63,6 @@ compressible responses and uploads.
 
 **brok** accepts the following registration options:
 
-  - `decompress` - if `false`, disables registering the encoding for decompression.
-    Defaults to `true`.
   - `compress` - compression settings.
     Set to `false` to disable response compression using brotli.
       - `quality` - used to adjust compression speed vs quality from 0 to 11.
@@ -73,6 +71,9 @@ compressible responses and uploads.
         Available values:
         - `'generic'` - default compression mode. Default value.
         - `'text'` - optimize for UTF-8 formatted text input.
+  - `decompress` - if `true`, also register the encoding for decompressing incoming payloads.
+    Do not enable unless required (see security note).
+    Defaults to `false`.
 
 ### Compression options
 
@@ -93,3 +94,10 @@ server.route({
     }
 });
 ```
+
+### Security and performance
+
+Warning: The compression and de-compression uses the `iltorb` module, which compiles and executes native code.
+This ensures optimal performance, however it also enables additional potential attack vectors against your server. In the default configuration, with de-compression disabled, the potential is quite limited, though still present when handling user generated content.
+
+With de-compression enabled, the attack surface expands significantly. As such, it should probably be avoided unless you have taken measures to protect the server, and can show a clear gain from enabling it.
