@@ -2,12 +2,11 @@
 
 // Load modules
 
+const Brok = require('..');
 const Code = require('code');
 const Hapi = require('hapi');
-const Hoek = require('hoek');
 const Iltorb = require('iltorb');
 const Lab = require('lab');
-const Brok = require('..');
 
 
 // Declare internals
@@ -18,26 +17,24 @@ const internals = {};
 // Test shortcuts
 
 const lab = exports.lab = Lab.script();
-const describe = lab.describe;
-const it = lab.it;
+const { describe, it } = lab;
 const expect = Code.expect;
 
 
 describe('brok', () => {
 
-    const provisionServer = (options) => {
+    const provisionServer = async (options) => {
 
         const server = new Hapi.Server();
-        server.connection();
-        server.register(options ? { register: Brok, options } : Brok, Hoek.ignore);
+        await server.register(options ? { register: Brok, options } : Brok);
         return server;
     };
 
     describe('compression', () => {
 
-        it('is applied to compressable responses', (done) => {
+        it('is applied to compressable responses', async () => {
 
-            const server = provisionServer();
+            const server = await provisionServer();
             const handler = (request, reply) => {
 
                 return reply('compressable');
@@ -45,24 +42,20 @@ describe('brok', () => {
 
             server.route({ method: 'GET', path: '/compressable', handler });
 
-            server.inject({ url: '/compressable', headers: { 'accept-encoding': 'br' } }, (res) => {
+            const res = await server.inject({ url: '/compressable', headers: { 'accept-encoding': 'br' } });
 
-                expect(res.statusCode).to.equal(200);
-                expect(res.headers['content-encoding']).to.equal('br');
-                expect(res.headers['content-length']).to.not.exist();
+            expect(res.statusCode).to.equal(200);
+            expect(res.headers['content-encoding']).to.equal('br');
+            expect(res.headers['content-length']).to.not.exist();
 
-                const decompressed = Iltorb.decompressSync(res.rawPayload);
-                expect(decompressed.length).to.equal(12);
-                expect(decompressed.toString()).to.equal('compressable');
-
-                done();
-            });
+            const decompressed = Iltorb.decompressSync(res.rawPayload);
+            expect(decompressed.length).to.equal(12);
+            expect(decompressed.toString()).to.equal('compressable');
         });
 
-        it('handles late registration', (done) => {
+        it('handles late registration', async () => {
 
             const server = new Hapi.Server();
-            server.connection();
 
             const handler = (request, reply) => {
 
@@ -71,29 +64,22 @@ describe('brok', () => {
 
             server.route({ method: 'GET', path: '/compressable', config: { handler, compression: { br: {} } } });
 
-            server.register(Brok, Hoek.ignore);
+            await server.register(Brok);
 
-            server.inject({ url: '/compressable', headers: { 'accept-encoding': 'br' } }, (res) => {
+            const res = await server.inject({ url: '/compressable', headers: { 'accept-encoding': 'br' } });
 
-                expect(res.statusCode).to.equal(200);
-                expect(res.headers['content-encoding']).to.equal('br');
-                expect(res.headers['content-length']).to.not.exist();
+            expect(res.statusCode).to.equal(200);
+            expect(res.headers['content-encoding']).to.equal('br');
+            expect(res.headers['content-length']).to.not.exist();
 
-                const decompressed = Iltorb.decompressSync(res.rawPayload);
-                expect(decompressed.length).to.equal(12);
-                expect(decompressed.toString()).to.equal('compressable');
-
-                done();
-            });
+            const decompressed = Iltorb.decompressSync(res.rawPayload);
+            expect(decompressed.length).to.equal(12);
+            expect(decompressed.toString()).to.equal('compressable');
         });
 
-        it('works with multiple connections', (done) => {
+        it('requires accept-encoding', async () => {
 
-            const server = new Hapi.Server();
-            const api1 = server.connection();
-            const api2 = server.connection();
-            api1.register(Brok, Hoek.ignore);
-
+            const server = await provisionServer();
             const handler = (request, reply) => {
 
                 return reply('compressable');
@@ -101,30 +87,17 @@ describe('brok', () => {
 
             server.route({ method: 'GET', path: '/compressable', handler });
 
-            api1.inject({ url: '/compressable', headers: { 'accept-encoding': 'br' } }, (res1) => {
+            const res = await server.inject('/compressable');
 
-                expect(res1.statusCode).to.equal(200);
-                expect(res1.headers['content-encoding']).to.equal('br');
-                expect(res1.headers['content-length']).to.not.exist();
-
-                const decompressed1 = Iltorb.decompressSync(res1.rawPayload);
-                expect(decompressed1.length).to.equal(12);
-                expect(decompressed1.toString()).to.equal('compressable');
-
-                api2.inject({ url: '/compressable', headers: { 'accept-encoding': 'br' } }, (res2) => {
-
-                    expect(res2.statusCode).to.equal(200);
-                    expect(res2.headers['content-encoding']).to.not.exist();
-                    expect(res2.payload.length).to.equal(12);
-                    expect(res2.payload).to.equal('compressable');
-                    done();
-                });
-            });
+            expect(res.statusCode).to.equal(200);
+            expect(res.headers['content-encoding']).to.not.exist();
+            expect(res.payload.length).to.equal(12);
+            expect(res.payload).to.equal('compressable');
         });
 
-        it('requires accept-encoding', (done) => {
+        it('can be disabled', async () => {
 
-            const server = provisionServer();
+            const server = await provisionServer({ compress: false });
             const handler = (request, reply) => {
 
                 return reply('compressable');
@@ -132,41 +105,17 @@ describe('brok', () => {
 
             server.route({ method: 'GET', path: '/compressable', handler });
 
-            server.inject('/compressable', (res) => {
+            const res = await server.inject({ url: '/compressable', headers: { 'accept-encoding': 'br' } });
 
-                expect(res.statusCode).to.equal(200);
-                expect(res.headers['content-encoding']).to.not.exist();
-                expect(res.payload.length).to.equal(12);
-                expect(res.payload).to.equal('compressable');
-
-                done();
-            });
+            expect(res.statusCode).to.equal(200);
+            expect(res.headers['content-encoding']).to.not.exist();
+            expect(res.payload.length).to.equal(12);
+            expect(res.payload).to.equal('compressable');
         });
 
-        it('can be disabled', (done) => {
+        it('supports mode option', async () => {
 
-            const server = provisionServer({ compress: false });
-            const handler = (request, reply) => {
-
-                return reply('compressable');
-            };
-
-            server.route({ method: 'GET', path: '/compressable', handler });
-
-            server.inject({ url: '/compressable', headers: { 'accept-encoding': 'br' } }, (res) => {
-
-                expect(res.statusCode).to.equal(200);
-                expect(res.headers['content-encoding']).to.not.exist();
-                expect(res.payload.length).to.equal(12);
-                expect(res.payload).to.equal('compressable');
-
-                done();
-            });
-        });
-
-        it('supports mode option', (done) => {
-
-            const server = provisionServer({ compress: { mode: 'text' } });
+            const server = await provisionServer({ compress: { mode: 'text' } });
             const handler = (request, reply) => {
 
                 return reply({ hello: 'world' });
@@ -184,24 +133,21 @@ describe('brok', () => {
 
             server.route({ method: 'GET', path: '/compressable', handler });
 
-            server.inject({ url: '/compressable', headers: { 'accept-encoding': 'br' } }, (res) => {
+            const res = await server.inject({ url: '/compressable', headers: { 'accept-encoding': 'br' } });
 
-                expect(res.statusCode).to.equal(200);
-                expect(res.headers['content-encoding']).to.equal('br');
-                expect(res.headers['content-length']).to.not.exist();
+            expect(res.statusCode).to.equal(200);
+            expect(res.headers['content-encoding']).to.equal('br');
+            expect(res.headers['content-length']).to.not.exist();
 
-                const decompressed = Iltorb.decompressSync(res.rawPayload);
-                expect(JSON.parse(decompressed.toString())).to.equal({ hello: 'world' });
+            const decompressed = Iltorb.decompressSync(res.rawPayload);
+            expect(JSON.parse(decompressed.toString())).to.equal({ hello: 'world' });
 
-                expect(compressOptions).to.contain({ mode: 1 });
-
-                done();
-            });
+            expect(compressOptions).to.contain({ mode: 1 });
         });
 
-        it('handles route compression options', (done) => {
+        it('handles route compression options', async () => {
 
-            const server = provisionServer();
+            const server = await provisionServer();
             const handler = (request, reply) => {
 
                 return reply({ hello: 'world' });
@@ -218,54 +164,47 @@ describe('brok', () => {
             server.route({ method: 'GET', path: '/text', config: { handler, compression: { br: { mode: 'text' } } } });
             server.route({ method: 'GET', path: '/quality', config: { handler, compression: { br: { quality: 1 } } } });
 
-            server.inject({ url: '/text', headers: { 'accept-encoding': 'br' } }, (res1) => {
+            const res1 = await server.inject({ url: '/text', headers: { 'accept-encoding': 'br' } });
 
-                expect(res1.statusCode).to.equal(200);
-                expect(res1.headers['content-encoding']).to.equal('br');
-                expect(res1.headers['content-length']).to.not.exist();
-                expect(JSON.parse(Iltorb.decompressSync(res1.rawPayload).toString())).to.equal({ hello: 'world' });
-                expect(compressOptions).to.contain({ mode: 1, quality: 5 });
+            expect(res1.statusCode).to.equal(200);
+            expect(res1.headers['content-encoding']).to.equal('br');
+            expect(res1.headers['content-length']).to.not.exist();
+            expect(JSON.parse(Iltorb.decompressSync(res1.rawPayload).toString())).to.equal({ hello: 'world' });
+            expect(compressOptions).to.contain({ mode: 1, quality: 5 });
 
-                server.inject({ url: '/quality', headers: { 'accept-encoding': 'br' } }, (res2) => {
+            const res2 = await server.inject({ url: '/quality', headers: { 'accept-encoding': 'br' } });
 
-                    Iltorb.compressStream = origCompressStream;
+            Iltorb.compressStream = origCompressStream;
 
-                    expect(res2.statusCode).to.equal(200);
-                    expect(res2.headers['content-encoding']).to.equal('br');
-                    expect(res2.headers['content-length']).to.not.exist();
-                    expect(JSON.parse(Iltorb.decompressSync(res2.rawPayload).toString())).to.equal({ hello: 'world' });
-                    expect(compressOptions).to.contain({ mode: 0, quality: 1 });
-                    done();
-                });
-            });
+            expect(res2.statusCode).to.equal(200);
+            expect(res2.headers['content-encoding']).to.equal('br');
+            expect(res2.headers['content-length']).to.not.exist();
+            expect(JSON.parse(Iltorb.decompressSync(res2.rawPayload).toString())).to.equal({ hello: 'world' });
+            expect(compressOptions).to.contain({ mode: 0, quality: 1 });
         });
 
-        it('throws on unknown options', (done) => {
+        it('throws on unknown options', async () => {
 
             const fn = (options) => {
 
-                return () => {
-
-                    provisionServer({ compress: options });
-                };
+                return provisionServer({ compress: options });
             };
 
-            expect(fn(true)).to.throw();
-            expect(fn({ mode: 0 })).to.throw();
-            expect(fn({ mode: 'test' })).to.throw();
-            expect(fn({ quality: 3.4 })).to.throw();
-            expect(fn({ unknown: true })).to.throw();
-            done();
+            await expect(fn(true)).to.reject();
+            await expect(fn({ mode: 0 })).to.reject();
+            await expect(fn({ mode: 'test' })).to.reject();
+            await expect(fn({ quality: 3.4 })).to.reject();
+            await expect(fn({ unknown: true })).to.reject();
         });
     });
 
     describe('decompression', () => {
 
-        it('is not enabled by default', (done) => {
+        it('is not enabled by default', async () => {
 
             let handled = false;
 
-            const server = provisionServer();
+            const server = await provisionServer();
             const handler = (request, reply) => {
 
                 handled = true;
@@ -274,7 +213,7 @@ describe('brok', () => {
 
             server.route({ method: 'POST', path: '/upload', handler });
 
-            const buf = Iltorb.compressSync(new Buffer('{"hello":"world"}'));
+            const buf = Iltorb.compressSync(Buffer.from('{"hello":"world"}'));
             const request = {
                 method: 'POST',
                 url: '/upload',
@@ -286,17 +225,15 @@ describe('brok', () => {
                 payload: buf
             };
 
-            server.inject(request, (res) => {
+            const res = await server.inject(request);
 
-                expect(res.statusCode).to.equal(400);
-                expect(handled).to.equal(false);
-                done();
-            });
+            expect(res.statusCode).to.equal(400);
+            expect(handled).to.equal(false);
         });
 
-        it('is supported for compressed requests', (done) => {
+        it('is supported for compressed requests', async () => {
 
-            const server = provisionServer({ decompress: true });
+            const server = await provisionServer({ decompress: true });
             const handler = (request, reply) => {
 
                 return reply(request.payload);
@@ -304,7 +241,7 @@ describe('brok', () => {
 
             server.route({ method: 'POST', path: '/upload', handler });
 
-            const buf = Iltorb.compressSync(new Buffer('{"hello":"world"}'));
+            const buf = Iltorb.compressSync(Buffer.from('{"hello":"world"}'));
             const request = {
                 method: 'POST',
                 url: '/upload',
@@ -316,19 +253,17 @@ describe('brok', () => {
                 payload: buf
             };
 
-            server.inject(request, (res) => {
+            const res = await server.inject(request);
 
-                expect(res.statusCode).to.equal(200);
-                expect(res.headers['content-length']).to.equal(17);
-                expect(res.headers['content-type']).to.contain('application/json');
-                expect(res.result).to.equal({ hello: 'world' });
-                done();
-            });
+            expect(res.statusCode).to.equal(200);
+            expect(res.headers['content-length']).to.equal(17);
+            expect(res.headers['content-type']).to.contain('application/json');
+            expect(res.result).to.equal({ hello: 'world' });
         });
 
-        it('returns 400 for invalid payload', (done) => {
+        it('returns 400 for invalid payload', async () => {
 
-            const server = provisionServer({ decompress: true });
+            const server = await provisionServer({ decompress: true });
             const handler = (request, reply) => {
 
                 return reply(request.payload);
@@ -336,7 +271,7 @@ describe('brok', () => {
 
             server.route({ method: 'POST', path: '/upload', handler });
 
-            const buf = new Buffer('hello world');
+            const buf = Buffer.from('hello world');
             const request = {
                 method: 'POST',
                 url: '/upload',
@@ -348,28 +283,22 @@ describe('brok', () => {
                 payload: buf
             };
 
-            server.inject(request, (res) => {
+            const res = await server.inject(request);
 
-                expect(res.statusCode).to.equal(400);
-                expect(res.headers['content-type']).to.contain('application/json');
-                expect(res.result).to.contain({ message: 'Invalid compressed payload' });
-                done();
-            });
+            expect(res.statusCode).to.equal(400);
+            expect(res.headers['content-type']).to.contain('application/json');
+            expect(res.result).to.contain({ message: 'Invalid compressed payload' });
         });
 
-        it('throws on unknown options', (done) => {
+        it('throws on unknown options', async () => {
 
             const fn = (options) => {
 
-                return () => {
-
-                    provisionServer({ decompress: options });
-                };
+                return provisionServer({ decompress: options });
             };
 
-            expect(fn({})).to.throw();
-            expect(fn(10)).to.throw();
-            done();
+            await expect(fn({})).to.reject();
+            await expect(fn(10)).to.reject();
         });
     });
 });
