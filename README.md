@@ -28,30 +28,32 @@ Registration with custom quality default:
 const Hapi = require('hapi');
 const Brok = require('brok');
 
-const server = new Hapi.Server();
-server.connection({ port: 3000 });
+const server = new Hapi.Server({ port: 3000 });
 
-server.route({
-    method: 'GET',
-    path: '/fetch',
-    handler: function (request, reply) {
+const provision = async () => {
 
-        return reply('ok');
-    }
-});
+    server.route({
+        method: 'GET',
+        path: '/fetch',
+        handler() {
 
-server.register({
-    register: Brok,
-    options: {
-        compress: { quality: 3 }
-    }
-}).then(() => {
-
-    server.start().then(() => {
-
-        console.log('Server running at:', server.info.uri);
+            return 'ok';
+        }
     });
-});
+
+    await server.register({
+        register: Brok,
+        options: {
+            compress: { quality: 3 }
+        }
+    });
+
+    await server.start();
+
+    console.log('Server running at:', server.info.uri);
+};
+
+provision();
 ```
 
 ## Usage
@@ -84,9 +86,9 @@ server.route({
     method: 'GET',
     path: '/text',
     config: {
-        handler: function (request, reply) {
+        handler() {
 
-            return reply('hello!');
+            return 'hello!';
         },
         compression: {
             br: { mode: 'text' }
