@@ -25,8 +25,8 @@ describe('brok', () => {
 
     const provisionServer = async (options) => {
 
-        const server = new Hapi.Server();
-        await server.register(options ? { register: Brok, options } : Brok);
+        const server = new Hapi.Server({ compression: { minBytes: 1 } });
+        await server.register(options ? { plugin: Brok, options } : Brok);
         return server;
     };
 
@@ -35,10 +35,7 @@ describe('brok', () => {
         it('is applied to compressable responses', async () => {
 
             const server = await provisionServer();
-            const handler = (request, reply) => {
-
-                return reply('compressable');
-            };
+            const handler = () => 'compressable';
 
             server.route({ method: 'GET', path: '/compressable', handler });
 
@@ -55,12 +52,8 @@ describe('brok', () => {
 
         it('handles late registration', async () => {
 
-            const server = new Hapi.Server();
-
-            const handler = (request, reply) => {
-
-                return reply('compressable');
-            };
+            const server = new Hapi.Server({ compression: { minBytes: 1 } });
+            const handler = () => 'compressable';
 
             server.route({ method: 'GET', path: '/compressable', config: { handler, compression: { br: {} } } });
 
@@ -80,10 +73,7 @@ describe('brok', () => {
         it('requires accept-encoding', async () => {
 
             const server = await provisionServer();
-            const handler = (request, reply) => {
-
-                return reply('compressable');
-            };
+            const handler = () => 'compressable';
 
             server.route({ method: 'GET', path: '/compressable', handler });
 
@@ -98,10 +88,7 @@ describe('brok', () => {
         it('can be disabled', async () => {
 
             const server = await provisionServer({ compress: false });
-            const handler = (request, reply) => {
-
-                return reply('compressable');
-            };
+            const handler = () => 'compressable';
 
             server.route({ method: 'GET', path: '/compressable', handler });
 
@@ -116,10 +103,7 @@ describe('brok', () => {
         it('supports mode option', async () => {
 
             const server = await provisionServer({ compress: { mode: 'text' } });
-            const handler = (request, reply) => {
-
-                return reply({ hello: 'world' });
-            };
+            const handler = () => ({ hello: 'world' });
 
             let compressOptions;
             const origCompressStream = Iltorb.compressStream;
@@ -148,10 +132,7 @@ describe('brok', () => {
         it('handles route compression options', async () => {
 
             const server = await provisionServer();
-            const handler = (request, reply) => {
-
-                return reply({ hello: 'world' });
-            };
+            const handler = () => ({ hello: 'world' });
 
             let compressOptions;
             const origCompressStream = Iltorb.compressStream;
@@ -205,10 +186,10 @@ describe('brok', () => {
             let handled = false;
 
             const server = await provisionServer();
-            const handler = (request, reply) => {
+            const handler = (request) => {
 
                 handled = true;
-                return reply(request.payload);
+                return request.payload;
             };
 
             server.route({ method: 'POST', path: '/upload', handler });
@@ -234,10 +215,7 @@ describe('brok', () => {
         it('is supported for compressed requests', async () => {
 
             const server = await provisionServer({ decompress: true });
-            const handler = (request, reply) => {
-
-                return reply(request.payload);
-            };
+            const handler = (request) => request.payload;
 
             server.route({ method: 'POST', path: '/upload', handler });
 
@@ -264,10 +242,7 @@ describe('brok', () => {
         it('returns 400 for invalid payload', async () => {
 
             const server = await provisionServer({ decompress: true });
-            const handler = (request, reply) => {
-
-                return reply(request.payload);
-            };
+            const handler = (request) => request.payload;
 
             server.route({ method: 'POST', path: '/upload', handler });
 

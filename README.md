@@ -28,7 +28,7 @@ Registration with custom quality default:
 const Hapi = require('hapi');
 const Brok = require('brok');
 
-const server = new Hapi.Server({ port: 3000 });
+const server = new Hapi.Server({ port: 3000, compression: { minBytes: 1 } });
 
 const provision = async () => {
 
@@ -42,7 +42,7 @@ const provision = async () => {
     });
 
     await server.register({
-        register: Brok,
+        plugin: Brok,
         options: {
             compress: { quality: 3 }
         }

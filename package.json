@@ -21,11 +21,11 @@
   "dependencies": {
     "hoek": "5.x.x",
     "iltorb": "1.3.x",
-    "joi": "11.x.x"
+    "joi": "13.x.x"
   },
   "devDependencies": {
     "code": "5.x.x",
-    "hapi": "^17.0.0-rc1",
+    "hapi": "^17.0.0-rc8",
     "lab": "14.x.x"
   },
   "scripts": {
