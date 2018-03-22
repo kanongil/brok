@@ -1,7 +1,7 @@
 {
   "name": "brok",
   "description": "Brotli encoder and decoder for hapi.js",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "repository": "https://github.com/kanongil/brok.git",
   "main": "lib/index.js",
   "keywords": [
