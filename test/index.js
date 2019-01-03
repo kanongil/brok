@@ -107,12 +107,12 @@ describe('brok', () => {
 
             let compressOptions;
             const origCompressStream = Iltorb.compressStream;
-            Iltorb.compressStream = function (options) {
+            Iltorb.compressStream = function (options, ...args) {
 
                 compressOptions = options;
 
                 Iltorb.compressStream = origCompressStream;
-                return origCompressStream.apply(Iltorb, arguments);
+                return origCompressStream.call(Iltorb, options, ...args);
             };
 
             server.route({ method: 'GET', path: '/compressable', handler });
@@ -136,10 +136,10 @@ describe('brok', () => {
 
             let compressOptions;
             const origCompressStream = Iltorb.compressStream;
-            Iltorb.compressStream = function (options) {
+            Iltorb.compressStream = function (options, ...args) {
 
                 compressOptions = options;
-                return origCompressStream.apply(Iltorb, arguments);
+                return origCompressStream.call(Iltorb, options, ...args);
             };
 
             server.route({ method: 'GET', path: '/text', config: { handler, compression: { br: { mode: 'text' } } } });
