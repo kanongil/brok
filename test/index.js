@@ -3,10 +3,10 @@
 // Load modules
 
 const Brok = require('..');
-const Code = require('code');
-const Hapi = require('hapi');
+const Code = require('@hapi/code');
+const Hapi = require('@hapi/hapi');
 const Iltorb = require('iltorb');
-const Lab = require('lab');
+const Lab = require('@hapi/lab');
 
 
 // Declare internals

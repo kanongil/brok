@@ -25,7 +25,7 @@ Registration with custom quality default:
 ```js
 'use strict';
 
-const Hapi = require('hapi');
+const Hapi = require('@hapi/hapi');
 const Brok = require('brok');
 
 const server = new Hapi.Server({ port: 3000, compression: { minBytes: 1 } });
