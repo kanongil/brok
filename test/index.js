@@ -6,6 +6,7 @@ const Brok = require('..');
 const Code = require('@hapi/code');
 const Hapi = require('@hapi/hapi');
 const Iltorb = require('iltorb');
+const Zlib = require('zlib');
 const Lab = require('@hapi/lab');
 
 
@@ -23,6 +24,8 @@ const expect = Code.expect;
 
 describe('brok', () => {
 
+    const canUseNative = 'brotliCompress' in Zlib;
+
     const provisionServer = async (options) => {
 
         const server = new Hapi.Server({ compression: { minBytes: 1 } });
@@ -35,6 +38,28 @@ describe('brok', () => {
         it('is applied to compressable responses', async () => {
 
             const server = await provisionServer();
+            const handler = () => 'compressable';
+
+            server.route({ method: 'GET', path: '/compressable', handler });
+
+            const res = await server.inject({ url: '/compressable', headers: { 'accept-encoding': 'br' } });
+
+            expect(res.statusCode).to.equal(200);
+            expect(res.headers['content-encoding']).to.equal('br');
+            expect(res.headers['content-length']).to.not.exist();
+
+            const decompressed = Iltorb.decompressSync(res.rawPayload);
+            expect(decompressed.length).to.equal(12);
+            expect(decompressed.toString()).to.equal('compressable');
+        });
+
+        it('is applied to compressable responses usign native module', async () => {
+
+            if (!canUseNative) {
+                return;
+            }
+
+            const server = await provisionServer({ native: true });
             const handler = () => 'compressable';
 
             server.route({ method: 'GET', path: '/compressable', handler });
@@ -239,9 +264,70 @@ describe('brok', () => {
             expect(res.result).to.equal({ hello: 'world' });
         });
 
+        it('is supported for compressed requests using native module', async () => {
+
+            if (!canUseNative) {
+                return;
+            }
+
+            const server = await provisionServer({ decompress: true, native: true });
+            const handler = (request) => request.payload;
+
+            server.route({ method: 'POST', path: '/upload', handler });
+
+            const buf = Iltorb.compressSync(Buffer.from('{"hello":"world"}'));
+            const request = {
+                method: 'POST',
+                url: '/upload',
+                headers: {
+                    'content-type': 'application/json',
+                    'content-encoding': 'br',
+                    'content-length': buf.length
+                },
+                payload: buf
+            };
+
+            const res = await server.inject(request);
+
+            expect(res.statusCode).to.equal(200);
+            expect(res.headers['content-length']).to.equal(17);
+            expect(res.headers['content-type']).to.contain('application/json');
+            expect(res.result).to.equal({ hello: 'world' });
+        });
+
         it('returns 400 for invalid payload', async () => {
 
             const server = await provisionServer({ decompress: true });
+            const handler = (request) => request.payload;
+
+            server.route({ method: 'POST', path: '/upload', handler });
+
+            const buf = Buffer.from('hello world');
+            const request = {
+                method: 'POST',
+                url: '/upload',
+                headers: {
+                    'content-type': 'application/json',
+                    'content-encoding': 'br',
+                    'content-length': buf.length
+                },
+                payload: buf
+            };
+
+            const res = await server.inject(request);
+
+            expect(res.statusCode).to.equal(400);
+            expect(res.headers['content-type']).to.contain('application/json');
+            expect(res.result).to.contain({ message: 'Invalid compressed payload' });
+        });
+
+        it('returns 400 for invalid payload using native module', async () => {
+
+            if (!canUseNative) {
+                return;
+            }
+
+            const server = await provisionServer({ decompress: true, native: true });
             const handler = (request) => request.payload;
 
             server.route({ method: 'POST', path: '/upload', handler });
