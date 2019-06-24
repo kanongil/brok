@@ -5,10 +5,9 @@
 const Brok = require('..');
 const Code = require('@hapi/code');
 const Hapi = require('@hapi/hapi');
-const Iltorb = require('iltorb');
 const Zlib = require('zlib');
 const Lab = require('@hapi/lab');
-
+const Sinon = require('sinon');
 
 // Declare internals
 
@@ -23,8 +22,6 @@ const expect = Code.expect;
 
 
 describe('brok', () => {
-
-    const canUseNative = 'brotliCompress' in Zlib;
 
     const provisionServer = async (options) => {
 
@@ -48,29 +45,7 @@ describe('brok', () => {
             expect(res.headers['content-encoding']).to.equal('br');
             expect(res.headers['content-length']).to.not.exist();
 
-            const decompressed = Iltorb.decompressSync(res.rawPayload);
-            expect(decompressed.length).to.equal(12);
-            expect(decompressed.toString()).to.equal('compressable');
-        });
-
-        it('is applied to compressable responses usign native module', async () => {
-
-            if (!canUseNative) {
-                return;
-            }
-
-            const server = await provisionServer({ native: true });
-            const handler = () => 'compressable';
-
-            server.route({ method: 'GET', path: '/compressable', handler });
-
-            const res = await server.inject({ url: '/compressable', headers: { 'accept-encoding': 'br' } });
-
-            expect(res.statusCode).to.equal(200);
-            expect(res.headers['content-encoding']).to.equal('br');
-            expect(res.headers['content-length']).to.not.exist();
-
-            const decompressed = Iltorb.decompressSync(res.rawPayload);
+            const decompressed = Zlib.brotliDecompressSync(res.rawPayload);
             expect(decompressed.length).to.equal(12);
             expect(decompressed.toString()).to.equal('compressable');
         });
@@ -90,7 +65,7 @@ describe('brok', () => {
             expect(res.headers['content-encoding']).to.equal('br');
             expect(res.headers['content-length']).to.not.exist();
 
-            const decompressed = Iltorb.decompressSync(res.rawPayload);
+            const decompressed = Zlib.brotliDecompressSync(res.rawPayload);
             expect(decompressed.length).to.equal(12);
             expect(decompressed.toString()).to.equal('compressable');
         });
@@ -130,28 +105,23 @@ describe('brok', () => {
             const server = await provisionServer({ compress: { mode: 'text' } });
             const handler = () => ({ hello: 'world' });
 
-            let compressOptions;
-            const origCompressStream = Iltorb.compressStream;
-            Iltorb.compressStream = function (options, ...args) {
-
-                compressOptions = options;
-
-                Iltorb.compressStream = origCompressStream;
-                return origCompressStream.call(Iltorb, options, ...args);
-            };
+            Sinon.spy(Zlib, 'createBrotliCompress');
 
             server.route({ method: 'GET', path: '/compressable', handler });
 
             const res = await server.inject({ url: '/compressable', headers: { 'accept-encoding': 'br' } });
-
+            const compressOptions = Zlib.createBrotliCompress.getCall(0).args[0];
+            Zlib.createBrotliCompress.restore();
             expect(res.statusCode).to.equal(200);
             expect(res.headers['content-encoding']).to.equal('br');
             expect(res.headers['content-length']).to.not.exist();
 
-            const decompressed = Iltorb.decompressSync(res.rawPayload);
+            const decompressed = Zlib.brotliDecompressSync(res.rawPayload);
             expect(JSON.parse(decompressed.toString())).to.equal({ hello: 'world' });
 
-            expect(compressOptions).to.contain({ mode: 1 });
+            expect(compressOptions).to.contain({
+                [Zlib.constants.BROTLI_PARAM_MODE]: Zlib.constants.BROTLI_MODE_TEXT
+            });
         });
 
         it('handles route compression options', async () => {
@@ -159,34 +129,33 @@ describe('brok', () => {
             const server = await provisionServer();
             const handler = () => ({ hello: 'world' });
 
-            let compressOptions;
-            const origCompressStream = Iltorb.compressStream;
-            Iltorb.compressStream = function (options, ...args) {
-
-                compressOptions = options;
-                return origCompressStream.call(Iltorb, options, ...args);
-            };
+            Sinon.spy(Zlib, 'createBrotliCompress');
 
             server.route({ method: 'GET', path: '/text', config: { handler, compression: { br: { mode: 'text' } } } });
             server.route({ method: 'GET', path: '/quality', config: { handler, compression: { br: { quality: 1 } } } });
 
             const res1 = await server.inject({ url: '/text', headers: { 'accept-encoding': 'br' } });
-
+            let compressOptions = Zlib.createBrotliCompress.getCall(0).args[0];
             expect(res1.statusCode).to.equal(200);
             expect(res1.headers['content-encoding']).to.equal('br');
             expect(res1.headers['content-length']).to.not.exist();
-            expect(JSON.parse(Iltorb.decompressSync(res1.rawPayload).toString())).to.equal({ hello: 'world' });
-            expect(compressOptions).to.contain({ mode: 1, quality: 5 });
+            expect(JSON.parse(Zlib.brotliDecompressSync(res1.rawPayload).toString())).to.equal({ hello: 'world' });
+            expect(compressOptions).to.contain({
+                [Zlib.constants.BROTLI_PARAM_MODE]: Zlib.constants.BROTLI_MODE_TEXT,
+                [Zlib.constants.BROTLI_PARAM_QUALITY]: Zlib.constants.BROTLI_DEFAULT_QUALITY
+            });
 
             const res2 = await server.inject({ url: '/quality', headers: { 'accept-encoding': 'br' } });
-
-            Iltorb.compressStream = origCompressStream;
-
+            compressOptions = Zlib.createBrotliCompress.getCall(1).args[0];
+            Zlib.createBrotliCompress.restore();
             expect(res2.statusCode).to.equal(200);
             expect(res2.headers['content-encoding']).to.equal('br');
             expect(res2.headers['content-length']).to.not.exist();
-            expect(JSON.parse(Iltorb.decompressSync(res2.rawPayload).toString())).to.equal({ hello: 'world' });
-            expect(compressOptions).to.contain({ mode: 0, quality: 1 });
+            expect(JSON.parse(Zlib.brotliDecompressSync(res2.rawPayload).toString())).to.equal({ hello: 'world' });
+            expect(compressOptions).to.contain({
+                [Zlib.constants.BROTLI_PARAM_MODE]: Zlib.constants.BROTLI_MODE_GENERIC,
+                [Zlib.constants.BROTLI_PARAM_QUALITY]: 1
+            });
         });
 
         it('throws on unknown options', async () => {
@@ -219,7 +188,7 @@ describe('brok', () => {
 
             server.route({ method: 'POST', path: '/upload', handler });
 
-            const buf = Iltorb.compressSync(Buffer.from('{"hello":"world"}'));
+            const buf = Zlib.brotliCompressSync(Buffer.from('{"hello":"world"}'));
             const request = {
                 method: 'POST',
                 url: '/upload',
@@ -244,7 +213,7 @@ describe('brok', () => {
 
             server.route({ method: 'POST', path: '/upload', handler });
 
-            const buf = Iltorb.compressSync(Buffer.from('{"hello":"world"}'));
+            const buf = Zlib.brotliCompressSync(Buffer.from('{"hello":"world"}'));
             const request = {
                 method: 'POST',
                 url: '/upload',
@@ -264,36 +233,6 @@ describe('brok', () => {
             expect(res.result).to.equal({ hello: 'world' });
         });
 
-        it('is supported for compressed requests using native module', async () => {
-
-            if (!canUseNative) {
-                return;
-            }
-
-            const server = await provisionServer({ decompress: true, native: true });
-            const handler = (request) => request.payload;
-
-            server.route({ method: 'POST', path: '/upload', handler });
-
-            const buf = Iltorb.compressSync(Buffer.from('{"hello":"world"}'));
-            const request = {
-                method: 'POST',
-                url: '/upload',
-                headers: {
-                    'content-type': 'application/json',
-                    'content-encoding': 'br',
-                    'content-length': buf.length
-                },
-                payload: buf
-            };
-
-            const res = await server.inject(request);
-
-            expect(res.statusCode).to.equal(200);
-            expect(res.headers['content-length']).to.equal(17);
-            expect(res.headers['content-type']).to.contain('application/json');
-            expect(res.result).to.equal({ hello: 'world' });
-        });
 
         it('returns 400 for invalid payload', async () => {
 
@@ -320,37 +259,6 @@ describe('brok', () => {
             expect(res.headers['content-type']).to.contain('application/json');
             expect(res.result).to.contain({ message: 'Invalid compressed payload' });
         });
-
-        it('returns 400 for invalid payload using native module', async () => {
-
-            if (!canUseNative) {
-                return;
-            }
-
-            const server = await provisionServer({ decompress: true, native: true });
-            const handler = (request) => request.payload;
-
-            server.route({ method: 'POST', path: '/upload', handler });
-
-            const buf = Buffer.from('hello world');
-            const request = {
-                method: 'POST',
-                url: '/upload',
-                headers: {
-                    'content-type': 'application/json',
-                    'content-encoding': 'br',
-                    'content-length': buf.length
-                },
-                payload: buf
-            };
-
-            const res = await server.inject(request);
-
-            expect(res.statusCode).to.equal(400);
-            expect(res.headers['content-type']).to.contain('application/json');
-            expect(res.result).to.contain({ message: 'Invalid compressed payload' });
-        });
-
         it('throws on unknown options', async () => {
 
             const fn = (options) => {
