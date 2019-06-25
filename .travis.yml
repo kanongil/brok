@@ -10,12 +10,5 @@ install:
   - "npm install @hapi/hapi@$HAPI_VERSION"
 
 env:
-  - CXX=g++-4.8 HAPI_VERSION="17"
-  - CXX=g++-4.8 HAPI_VERSION="18"
-
-addons:
-  apt:
-    sources:
-      - ubuntu-toolchain-r-test
-    packages:
-      - g++-4.8
+  - HAPI_VERSION="17"
+  - HAPI_VERSION="18"

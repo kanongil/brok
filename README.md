@@ -8,13 +8,12 @@ Lead Maintainer - [Gil Pedersen](https://github.com/kanongil)
 
 ## Install
 
-On Windows, in order to compile the native bindings, it is recommended to install the [windows-build-tools](https://github.com/felixrieseberg/windows-build-tools) beforehand.
-
-On Linux, a recent g++ compiler is required.
-
 ```sh
 npm install brok
 ```
+
+Note: Node must be version `^10.16` or `>= 12.4` with native brotli support.
+If you need it to work with other versions, use `brok@3`.
 
 ## Example
 
@@ -96,10 +95,3 @@ server.route({
     }
 });
 ```
-
-### Security and performance
-
-Warning: The compression and de-compression uses the `iltorb` module, which compiles and executes native code.
-This ensures optimal performance, however it also enables additional potential attack vectors against your server. In the default configuration, with de-compression disabled, the potential is quite limited, though still present when handling user generated content.
-
-With de-compression enabled, the attack surface expands significantly. As such, it should probably be avoided unless you have taken measures to protect the server, and can show a clear gain from enabling it.
