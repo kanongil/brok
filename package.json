@@ -13,20 +13,20 @@
     "plugin"
   ],
   "engines": {
-    "node": ">=8.9.0"
+    "node": "^10.16.0 || ^12.4.0"
   },
   "peerDependencies": {
     "@hapi/hapi": ">=17.9.0"
   },
   "dependencies": {
     "@hapi/hoek": "6.x.x",
-    "iltorb": "2.x.x",
     "@hapi/joi": "15.x.x"
   },
   "devDependencies": {
     "@hapi/code": "5.x.x",
     "@hapi/hapi": "18.x.x",
-    "@hapi/lab": "18.x.x"
+    "@hapi/lab": "18.x.x",
+    "sinon": "^7.3.2"
   },
   "scripts": {
     "test": "lab -f -a @hapi/code -t 100 -L",
