@@ -13,19 +13,19 @@
     "plugin"
   ],
   "engines": {
-    "node": "^10.16.0 || >=12.4.0"
+    "node": ">=12.13.0"
   },
   "peerDependencies": {
     "@hapi/hapi": ">=17.9.0"
   },
   "dependencies": {
-    "@hapi/hoek": "6.x.x",
-    "@hapi/joi": "15.x.x"
+    "@hapi/hoek": "^9.0.4",
+    "@hapi/joi": "^17.1.1"
   },
   "devDependencies": {
-    "@hapi/code": "5.x.x",
-    "@hapi/hapi": "18.x.x",
-    "@hapi/lab": "18.x.x"
+    "@hapi/code": "^8.0.1",
+    "@hapi/hapi": "^19.1.1",
+    "@hapi/lab": "^22.0.4"
   },
   "scripts": {
     "test": "lab -f -a @hapi/code -t 100 -L",

@@ -12,9 +12,6 @@ Lead Maintainer - [Gil Pedersen](https://github.com/kanongil)
 npm install brok
 ```
 
-Note: Node must be version `^10.16` or `>= 12.4` with native brotli support.
-If you need it to work with other versions, use `brok@3`.
-
 ## Example
 
 ### Registration
