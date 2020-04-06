@@ -70,7 +70,6 @@ compressible responses and uploads.
         - `'generic'` - default compression mode. Default value.
         - `'text'` - optimize for UTF-8 formatted text input.
   - `decompress` - if `true`, also register the encoding for decompressing incoming payloads.
-    Do not enable unless required (see security note).
     Defaults to `false`.
 
 ### Compression options
