@@ -20,12 +20,12 @@
   },
   "dependencies": {
     "@hapi/hoek": "^9.0.4",
-    "@hapi/joi": "^17.1.1"
+    "joi": "^17.1.1"
   },
   "devDependencies": {
     "@hapi/code": "^8.0.1",
-    "@hapi/hapi": "^19.1.1",
-    "@hapi/lab": "^22.0.4"
+    "@hapi/hapi": "^20.1.3",
+    "@hapi/lab": "^24.2.1"
   },
   "scripts": {
     "test": "lab -f -a @hapi/code -t 100 -L",

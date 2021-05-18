@@ -2,7 +2,8 @@ language: node_js
 
 node_js:
   - "12"
-  - "13"
+  - "14"
+  - "16"
   - "node"
 
 install:
@@ -13,3 +14,4 @@ env:
   - HAPI_VERSION="17"
   - HAPI_VERSION="18"
   - HAPI_VERSION="19"
+  - HAPI_VERSION="20"
