@@ -13,7 +13,7 @@
     "plugin"
   ],
   "engines": {
-    "node": ">=12.13.0"
+    "node": ">=18.12.0"
   },
   "peerDependencies": {
     "@hapi/hapi": ">=17.9.0"
