@@ -80,7 +80,7 @@ Route specific settings can be set using `br` object in the `compression` config
 server.route({
     method: 'GET',
     path: '/text',
-    config: {
+    options: {
         handler() {
 
             return 'hello!';

@@ -4,6 +4,7 @@
   "version": "5.0.2",
   "repository": "https://github.com/kanongil/brok.git",
   "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "keywords": [
     "brotli",
     "compress",
@@ -24,11 +25,14 @@
   },
   "devDependencies": {
     "@hapi/code": "^9.0.3",
-    "@hapi/hapi": "^21.3.6",
-    "@hapi/lab": "^25.2.0"
+    "@hapi/hapi": "^21.3.7",
+    "@hapi/lab": "^25.2.0",
+    "@types/node": "^20.11.28",
+    "joi": "^17.12.2",
+    "typescript": "~5.4.2"
   },
   "scripts": {
-    "test": "lab -f -a @hapi/code -t 100 -L",
+    "test": "lab -f -a @hapi/code -t 100 -L -Y",
     "test-cov-html": "lab -f -a @hapi/code -r html -o coverage.html"
   },
   "license": "BSD-3-Clause"

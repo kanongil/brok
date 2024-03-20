@@ -19,7 +19,7 @@ const provision = async () => {
     server.route({
         method: 'GET',
         path: '/text',
-        config: {
+        options: {
             handler() {
 
                 return 'hello!';
