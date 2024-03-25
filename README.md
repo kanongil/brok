@@ -2,7 +2,7 @@
 
 Brotli encoder and decoder for hapi.js.
 
-![Node.js CI](https://github.com/kanongil/brok/workflows/Node.js%20CI/badge.svg?event=push)
+[![Node.js CI](https://github.com/kanongil/brok/actions/workflows/ci.yaml/badge.svg)](https://github.com/kanongil/brok/actions/workflows/ci.yaml)
 
 Lead Maintainer - [Gil Pedersen](https://github.com/kanongil)
 
